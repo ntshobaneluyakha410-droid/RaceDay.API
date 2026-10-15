@@ -66,6 +66,7 @@ The test suite covers registration, login, password hashing, role-based access, 
 ## CI/CD
 
 GitHub Actions runs the test suite automatically on every push to the repository. The workflow file is located at `.github/workflows/ci.yml`.
+![CI Workflow](ci-screenshot.png)
 
 ## References
 
