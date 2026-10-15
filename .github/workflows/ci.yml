@@ -20,7 +20,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore API project
-        run: dotnet restore RaceDay.Api/RaceDay.Api.csproj
+        run: dotnet restore RaceDay.Api.csproj
 
       - name: Restore test project
         run: dotnet restore RaceDay.Api.Tests/RaceDay.Api.Tests.csproj
