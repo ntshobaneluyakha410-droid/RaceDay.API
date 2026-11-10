@@ -9,7 +9,7 @@ public class Participant
     public User User { get; set; } = null!;
     public DateTime DateOfBirth { get; set; }
     public string PhoneNumber { get; set; } = null!;
-    public string? ProfileImageUrl { get; set; } // <-- NEW
+    public string? ProfileImageUrl { get; set; } // This fixes the Profile Image error
 
     public ICollection<Enrolment> Enrolments { get; set; } = new List<Enrolment>();
 }
