@@ -1,17 +1,18 @@
 using Microsoft.EntityFrameworkCore;
-using RaceDay.Api.Data;
-using RaceDay.Api.Services;
+using RaceDay.API.Data;
+using RaceDay.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database
+// 1. Database Connection
 builder.Services.AddDbContext<RaceDayDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
 
-// Password hasher
+// 2. Register Services
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddScoped<LocalFileService>();
 
-// Session support
+// 3. Session Setup
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -21,6 +22,7 @@ builder.Services.AddSession(options =>
     options.Cookie.Name = ".RaceDay.Session";
 });
 
+// 4. Controllers & Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -34,7 +36,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseSession();          // <-- must come BEFORE MapControllers
+app.UseSession();
+app.UseStaticFiles(); // THIS ALLOWS IMAGES IN WWWROOT TO SHOW
 app.UseAuthorization();
 app.MapControllers();
 

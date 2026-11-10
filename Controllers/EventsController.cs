@@ -1,19 +1,27 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using RaceDay.Api.Data;
+using RaceDay.Api.Controllers;
 using RaceDay.Api.Dtos;
 using RaceDay.Api.Models;
+using RaceDay.API.Data;
+using RaceDay.API.Dtos;
+using RaceDay.API.Models;
+using RaceDay.API.Services;
 
-namespace RaceDay.Api.Controllers;
+namespace RaceDay.API.Controllers;
 
 [Route("api/[controller]")]
 public class EventsController : BaseController
 {
     private readonly RaceDayDbContext _db;
+    private readonly LocalFileService _fileService;
 
-    public EventsController(RaceDayDbContext db) => _db = db;
+    public EventsController(RaceDayDbContext db, LocalFileService fileService)
+    {
+        _db = db;
+        _fileService = fileService;
+    }
 
-    /// <summary>Lists all events. Both roles can view.</summary>
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -32,38 +40,11 @@ public class EventsController : BaseController
                 EventType = e.EventType,
                 OrganiserID = e.OrganiserID,
                 OrganiserName = e.Organiser.User.FirstName + " " + e.Organiser.User.LastName
-            })
-            .ToListAsync();
+            }).ToListAsync();
 
         return Ok(events);
     }
 
-    /// <summary>Gets a single event by ID. Both roles can view.</summary>
-    [HttpGet("{id}")]
-    public async Task<IActionResult> Get(int id)
-    {
-        if (!IsLoggedIn) return Unauthorized("Please log in.");
-
-        var e = await _db.Events
-            .Include(x => x.Organiser).ThenInclude(o => o.User)
-            .FirstOrDefaultAsync(x => x.EventID == id);
-
-        if (e is null) return NotFound();
-
-        return Ok(new EventResponseDto
-        {
-            EventID = e.EventID,
-            EventName = e.EventName,
-            EventDate = e.EventDate,
-            Location = e.Location,
-            Description = e.Description,
-            EventType = e.EventType,
-            OrganiserID = e.OrganiserID,
-            OrganiserName = e.Organiser.User.FirstName + " " + e.Organiser.User.LastName
-        });
-    }
-
-    /// <summary>Creates a new event. Organiser only.</summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateEventDto dto)
     {
@@ -85,51 +66,22 @@ public class EventsController : BaseController
 
         _db.Events.Add(newEvent);
         await _db.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(Get), new { id = newEvent.EventID },
-            new { newEvent.EventID, newEvent.EventName });
+        return CreatedAtAction(nameof(GetAll), new { id = newEvent.EventID }, newEvent);
     }
 
-    /// <summary>Updates an event. Only the owning Organiser can.</summary>
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] UpdateEventDto dto)
+    [HttpPost("{id}/upload-banner")]
+    public async Task<IActionResult> UploadBanner(int id, IFormFile file)
     {
-        if (!IsLoggedIn) return Unauthorized("Please log in.");
+        if (!IsLoggedIn) return Unauthorized();
         if (!IsOrganiser) return Forbid();
 
-        var organiser = await _db.Organisers.FirstOrDefaultAsync(o => o.UserID == CurrentUserID);
-        if (organiser is null) return Forbid();
+        var ev = await _db.Events.FindAsync(id);
+        if (ev == null) return NotFound();
 
-        var ev = await _db.Events.FirstOrDefaultAsync(e => e.EventID == id);
-        if (ev is null) return NotFound();
-        if (ev.OrganiserID != organiser.OrganiserID) return Forbid();
-
-        ev.EventName = dto.EventName;
-        ev.EventDate = dto.EventDate;
-        ev.Location = dto.Location;
-        ev.Description = dto.Description;
-        ev.EventType = dto.EventType;
-
+        var imageUrl = await _fileService.UploadFileAsync(file);
+        ev.BannerImageUrl = imageUrl;
         await _db.SaveChangesAsync();
-        return NoContent();
-    }
 
-    /// <summary>Deletes an event. Only the owning Organiser can.</summary>
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
-    {
-        if (!IsLoggedIn) return Unauthorized("Please log in.");
-        if (!IsOrganiser) return Forbid();
-
-        var organiser = await _db.Organisers.FirstOrDefaultAsync(o => o.UserID == CurrentUserID);
-        if (organiser is null) return Forbid();
-
-        var ev = await _db.Events.FirstOrDefaultAsync(e => e.EventID == id);
-        if (ev is null) return NotFound();
-        if (ev.OrganiserID != organiser.OrganiserID) return Forbid();
-
-        _db.Events.Remove(ev);
-        await _db.SaveChangesAsync();
-        return NoContent();
+        return Ok(new { ImageUrl = imageUrl });
     }
 }

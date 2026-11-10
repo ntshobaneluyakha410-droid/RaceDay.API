@@ -1,4 +1,6 @@
-﻿namespace RaceDay.Api.Models;
+﻿using RaceDay.Api.Models;
+
+namespace RaceDay.API.Models;
 
 public class Organiser
 {
